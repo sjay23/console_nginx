@@ -1,0 +1,45 @@
+version: "3.6"
+services:
+################################## php-fpm
+  logger_backend:
+    container_name: php_logger
+    build:
+      context: ./.docker/php
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      XDEBUG_CONFIG: "remote_host=192.168.220.1 remote_enable=1"
+      PHP_IDE_CONFIG: "serverName=Docker"
+    volumes:
+      - ./:/var/www/html
+      - ./var/cache:/var/www/html/var/cache
+      - ./var/log:/var/www/html/var/log
+      - ./.docker/php/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+      - ./.docker/php/error_reporting.ini:/usr/local/etc/php/conf.d/error_reporting.ini
+      - ./.docker/php/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+      - ./var/log/nginx:/var/log/nginx
+
+  logger_nginx:
+    container_name: nginx_logger
+    image: nginx:stable-alpine
+    ports:
+      - '8080:80'
+    volumes:
+      - ./:/var/www/html
+      - ./.docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./var/log/nginx:/var/log/nginx
+
+  clickhouse:
+    image: yandex/clickhouse-server
+    ports:
+      - 9004:9004
+      - 9000:9000
+      - 8123:8123
+    volumes:
+      - /var/docker-clickhouse:/var/lib/clickhouse
+      - ./.docker/clickhouse/init.sh:/docker-entrypoint-initdb.d/init.sh
+
+  clickhouse-client:
+    image: yandex/clickhouse-client
+    command: ['--host', 'clickhouse']
